@@ -7,7 +7,6 @@
  *
  * Learn more at https://developers.cloudflare.com/workers/
  */
-
 const endpoint = "https://api.line.me/v2/bot/message/reply";
 
 export default {
@@ -24,6 +23,26 @@ export default {
       } else {
         return "Invalid content-type";
       }
+    }
+
+    /**
+     * answerAi: AIに質問を投げる
+     * @param {string} question the question to ask the AI
+     * @returns {string} the answer from the AI
+     */
+    async function answerAi(question) {
+      const answer = await env.AI.run(
+        '@cf/meta/llama-3-8b-instruct',
+        {
+          messages: [
+            {
+              role: 'user',
+              content: question
+            }
+          ]
+        }
+      );
+      return answer.response;
     }
 
     /**
@@ -61,7 +80,8 @@ export default {
       if (reqBody.events) {
         for (const event of reqBody.events) {
           if (event.type === "message" && event.message.type === "text") {
-            await replyMessage(event.replyToken, event.message.text);
+            const aiReply = await answerAi(event.message.text);
+            await replyMessage(event.replyToken, aiReply);
           }
         }
       }
